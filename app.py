@@ -89,8 +89,8 @@ if option == "View Flavors":
     display_flavors()
 
 elif option == "Add Flavor":
-    flavor_name = st.text_input("Enter flavor name:")
-    seasonal = st.radio("Is this flavor seasonal?", ("Yes", "No"))
+    flavor_name = st.text_input("Enter the name of the flavor:")
+    seasonal = st.radio("whether the entered flavor seasonal?", ("Yes=1", "No=0"))
     if st.button("Add Flavor"):
         cursor = conn.cursor()
         cursor.execute('INSERT INTO flavors (name, seasonal) VALUES (?, ?)', (flavor_name, 1 if seasonal == "Yes" else 0))
@@ -100,7 +100,7 @@ elif option == "Add Flavor":
 
 elif option == "Delete Flavor":
     display_flavors()
-    flavor_id = st.number_input("Enter the ID of the flavor to delete:", min_value=1, step=1)
+    flavor_id = st.number_input("Enter flavor ID  to delete:", min_value=1, step=1)
     if st.button("Delete Flavor"):
         cursor = conn.cursor()
         cursor.execute('DELETE FROM flavors WHERE id = ?', (flavor_id,))
@@ -110,9 +110,9 @@ elif option == "Delete Flavor":
 
 elif option == "Update Flavor":
     display_flavors()
-    flavor_id = st.number_input("Enter the ID of the flavor to update:", min_value=1, step=1)
+    flavor_id = st.number_input("Enter the flavor Id to be  updated:", min_value=1, step=1)
     new_flavor_name = st.text_input("Enter new flavor name:")
-    new_seasonal = st.radio("Is this flavor seasonal?", ("Yes", "No"))
+    new_seasonal = st.radio("whether the entered flavor seasonal?", ("Yes=1", "No=0"))
     if st.button("Update Flavor"):
         cursor = conn.cursor()
         cursor.execute('UPDATE flavors SET name = ?, seasonal = ? WHERE id = ?', 
@@ -142,8 +142,8 @@ elif option == "Manage Ingredients":
 
     elif sub_option == "Update Ingredient Quantity":
         display_ingredients()
-        ingredient_id = st.number_input("Enter the ID of the ingredient to update:", min_value=1, step=1)
-        new_quantity = st.number_input("New Quantity in Stock:", min_value=0.0, step=0.1)
+        ingredient_id = st.number_input("Enter the id  of the ingredient to be updated:", min_value=1, step=1)
+        new_quantity = st.number_input("New quantity in stock:", min_value=0.0, step=0.1)
         if st.button("Update Quantity"):
             cursor = conn.cursor()
             cursor.execute('UPDATE ingredients SET quantity_in_stock = ? WHERE id = ?', 
@@ -160,7 +160,7 @@ elif option == "Customer Suggestions":
         display_suggestions()
 
     elif sub_option == "Add Suggestion":
-        flavor_suggestion = st.text_input("Flavor Suggestion:")
+        flavor_suggestion = st.text_input("Flavor suggestion:")
         allergy_concern = st.text_input("Allergy Concern (if any):")
         if st.button("Submit Suggestion"):
             cursor = conn.cursor()
