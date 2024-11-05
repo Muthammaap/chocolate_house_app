@@ -1,0 +1,12 @@
+# Ignore virtual environment folder
+myenv/
+
+# Ignore cache files
+__pycache__/
+*.pyc
+
+# Ignore SQLite database files (if you don’t want to share these in the repository)
+*.sqlite
+
+# macOS-specific system file, safe to ignore
+.DS_Store
