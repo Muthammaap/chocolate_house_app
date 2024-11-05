@@ -1,118 +1,174 @@
+import streamlit as st
 import sqlite3
+import pandas as pd
 
-def connect_db():
-    """Connects to the SQLite database."""
-    return sqlite3.connect('chocolate_house.db')
+# Connect to the SQLite database
+conn = sqlite3.connect('chocolate_house.db')
 
-def create_flavors_table(conn):
-    """Creates a table for flavors in the database."""
+# Check if tables exist; create them if they don't
+def initialize_database():
     cursor = conn.cursor()
+
+    # Table for flavors
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS flavors (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            seasonal TEXT NOT NULL
+            seasonal INTEGER NOT NULL
         )
     ''')
-    conn.commit()
-    print("Flavors table created successfully!")
 
-def create_feedback_table(conn):
-    """Creates a table for customer feedback in the database."""
-    cursor = conn.cursor()
+    # Table for ingredients
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS feedback (
+        CREATE TABLE IF NOT EXISTS ingredients (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            flavor_id INTEGER,
-            suggestion TEXT,
-            allergy_concern TEXT,
-            FOREIGN KEY (flavor_id) REFERENCES flavors (id)
+            name TEXT NOT NULL,
+            quantity_in_stock REAL NOT NULL,
+            unit TEXT NOT NULL
         )
     ''')
-    conn.commit()
-    print("Feedback table created successfully!")
 
-def add_flavor(conn, name, seasonal):
-    """Inserts a new flavor into the database."""
-    cursor = conn.cursor()
+    # Table for customer suggestions
     cursor.execute('''
-        INSERT INTO flavors (name, seasonal) VALUES (?, ?)
-    ''', (name, seasonal))
-    conn.commit()
-    print(f"Flavor '{name}' added successfully!")
+        CREATE TABLE IF NOT EXISTS customer_suggestions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            flavor_suggestion TEXT NOT NULL,
+            allergy_concern TEXT
+        )
+    ''')
 
-def add_feedback(conn, flavor_id, suggestion, allergy_concern):
-    """Inserts customer feedback into the database."""
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO feedback (flavor_id, suggestion, allergy_concern) VALUES (?, ?, ?)
-    ''', (flavor_id, suggestion, allergy_concern))
     conn.commit()
-    print("Feedback added successfully!")
 
-def display_feedback(conn):
-    """Displays all customer feedback from the database."""
+# Initialize the database
+initialize_database()
+
+# Helper function to display the structure of any table
+def check_table_structure(table_name):
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM feedback')
-    feedback_list = cursor.fetchall()
+    cursor.execute(f"PRAGMA table_info({table_name});")
+    structure = cursor.fetchall()
+    st.write(f"Table Structure for {table_name}:")
+    st.write(structure)
+
+# Display Flavors
+def display_flavors():
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM flavors')
+    flavors = cursor.fetchall()
+    df = pd.DataFrame(flavors, columns=["ID", "Name", "Seasonal"])
+    st.write("Available Flavors:")
+    st.table(df)
+
+# Display Ingredients
+def display_ingredients():
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM ingredients')
+    ingredients = cursor.fetchall()
+    df = pd.DataFrame(ingredients, columns=["ID", "Name", "Quantity in Stock", "Unit"])
+    st.write("Ingredient Inventory:")
+    st.table(df)
+
+# Display Customer Suggestions
+def display_suggestions():
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM customer_suggestions')
+    suggestions = cursor.fetchall()
+    df = pd.DataFrame(suggestions, columns=["ID", "Flavor Suggestion", "Allergy Concern"])
+    st.write("Customer Suggestions:")
+    st.table(df)
+
+# Streamlit App Layout
+st.title("Chocolate House Management System")
+
+# Sidebar menu
+option = st.sidebar.selectbox("Select an option", ["View Flavors", "Add Flavor", "Delete Flavor", "Update Flavor",
+                                                   "Manage Ingredients", "Customer Suggestions"])
+
+# Flavor Management
+if option == "View Flavors":
+    display_flavors()
+
+elif option == "Add Flavor":
+    flavor_name = st.text_input("Enter flavor name:")
+    seasonal = st.radio("Is this flavor seasonal?", ("Yes", "No"))
+    if st.button("Add Flavor"):
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO flavors (name, seasonal) VALUES (?, ?)', (flavor_name, 1 if seasonal == "Yes" else 0))
+        conn.commit()
+        st.success(f"Flavor '{flavor_name}' added successfully!")
+        display_flavors()
+
+elif option == "Delete Flavor":
+    display_flavors()
+    flavor_id = st.number_input("Enter the ID of the flavor to delete:", min_value=1, step=1)
+    if st.button("Delete Flavor"):
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM flavors WHERE id = ?', (flavor_id,))
+        conn.commit()
+        st.success(f"Flavor with ID {flavor_id} deleted successfully!")
+        display_flavors()
+
+elif option == "Update Flavor":
+    display_flavors()
+    flavor_id = st.number_input("Enter the ID of the flavor to update:", min_value=1, step=1)
+    new_flavor_name = st.text_input("Enter new flavor name:")
+    new_seasonal = st.radio("Is this flavor seasonal?", ("Yes", "No"))
+    if st.button("Update Flavor"):
+        cursor = conn.cursor()
+        cursor.execute('UPDATE flavors SET name = ?, seasonal = ? WHERE id = ?', 
+                       (new_flavor_name, 1 if new_seasonal == "Yes" else 0, flavor_id))
+        conn.commit()
+        st.success(f"Flavor with ID {flavor_id} updated successfully!")
+        display_flavors()
+
+# Ingredient Management
+elif option == "Manage Ingredients":
+    sub_option = st.radio("Select Ingredient Option", ["View Ingredients", "Add Ingredient", "Update Ingredient Quantity"])
     
-    if feedback_list:
-        print("Customer Feedback:")
-        for feedback in feedback_list:
-            print(f"ID: {feedback[0]}, Flavor ID: {feedback[1]}, Suggestion: {feedback[2]}, Allergy Concern: {feedback[3]}")
-    else:
-        print("No feedback available.")
+    if sub_option == "View Ingredients":
+        display_ingredients()
 
-def delete_feedback(conn, feedback_id):
-    """Deletes feedback from the database by ID."""
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM feedback WHERE id = ?', (feedback_id,))
-    conn.commit()
-    print(f"Feedback with ID {feedback_id} deleted successfully!")
+    elif sub_option == "Add Ingredient":
+        ingredient_name = st.text_input("Ingredient Name:")
+        quantity = st.number_input("Quantity in Stock:", min_value=0.0, step=0.1)
+        unit = st.text_input("Unit (e.g., grams, kg, liters):")
+        if st.button("Add Ingredient"):
+            cursor = conn.cursor()
+            cursor.execute('INSERT INTO ingredients (name, quantity_in_stock, unit) VALUES (?, ?, ?)', 
+                           (ingredient_name, quantity, unit))
+            conn.commit()
+            st.success(f"Ingredient '{ingredient_name}' added successfully with quantity {quantity} {unit}.")
+            display_ingredients()
 
-def main():
-    """Main function to run the application."""
-    print("Hello, Chocolate House!")
-    conn = connect_db()
-    create_flavors_table(conn)
-    create_feedback_table(conn)
+    elif sub_option == "Update Ingredient Quantity":
+        display_ingredients()
+        ingredient_id = st.number_input("Enter the ID of the ingredient to update:", min_value=1, step=1)
+        new_quantity = st.number_input("New Quantity in Stock:", min_value=0.0, step=0.1)
+        if st.button("Update Quantity"):
+            cursor = conn.cursor()
+            cursor.execute('UPDATE ingredients SET quantity_in_stock = ? WHERE id = ?', 
+                           (new_quantity, ingredient_id))
+            conn.commit()
+            st.success(f"Ingredient ID {ingredient_id} updated to new quantity {new_quantity}.")
+            display_ingredients()
 
-    while True:
-        print("\nOptions:")
-        print("1. Add Flavor")
-        print("2. Provide Feedback")
-        print("3. Display Feedback")
-        print("4. Delete Feedback")
-        print("5. Exit")
+# Customer Suggestions
+elif option == "Customer Suggestions":
+    sub_option = st.radio("Select Option", ["View Suggestions", "Add Suggestion"])
 
-        choice = input("Choose an option (1-5): ")
+    if sub_option == "View Suggestions":
+        display_suggestions()
 
-        if choice == '1':
-            flavor_name = input("Enter the flavor name (or type 'exit' to finish): ")
-            if flavor_name.lower() == 'exit':
-                continue
-            seasonal_status = input("Enter seasonal status (Yes/No): ")
-            add_flavor(conn, flavor_name, seasonal_status)
+    elif sub_option == "Add Suggestion":
+        flavor_suggestion = st.text_input("Flavor Suggestion:")
+        allergy_concern = st.text_input("Allergy Concern (if any):")
+        if st.button("Submit Suggestion"):
+            cursor = conn.cursor()
+            cursor.execute('INSERT INTO customer_suggestions (flavor_suggestion, allergy_concern) VALUES (?, ?)', 
+                           (flavor_suggestion, allergy_concern))
+            conn.commit()
+            st.success("Thank you for your suggestion!")
+            display_suggestions()
 
-        elif choice == '2':
-            flavor_id = int(input("Enter the flavor ID to give feedback for: "))
-            suggestion = input("Enter your suggestion: ")
-            allergy_concern = input("Enter any allergy concerns: ")
-            add_feedback(conn, flavor_id, suggestion, allergy_concern)
-
-        elif choice == '3':
-            display_feedback(conn)
-
-        elif choice == '4':
-            feedback_id = int(input("Enter the feedback ID to delete: "))
-            delete_feedback(conn, feedback_id)
-
-        elif choice == '5':
-            print("Goodbye!")
-            break
-
-        else:
-            print("Invalid option. Please choose again.")
-
-if __name__ == "__main__":
-    main()
+# Close the database connection (optional)
+conn.close()
