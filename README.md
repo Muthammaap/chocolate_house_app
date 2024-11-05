@@ -22,10 +22,15 @@ To run the application locally, follow these steps:
 
 - After running the application, you will see a menu with the following options:
   1. Add Flavor
-  2. Provide Feedback
-  3. Display Feedback
-  4. Delete Feedback
-  5. Exit
+  2. View Flavor
+  3. Delete flavor
+  4. Update flavor
+  5. manage ingredients
+  6. add ingredients
+  7. update ingredients
+  8. customer suggestions
+  9. handle allergy concerns
+
 - Choose an option by typing the corresponding number.
 
 ## Technologies Used
